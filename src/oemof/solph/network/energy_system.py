@@ -41,4 +41,4 @@ class EnergySystem(es.EnergySystem):
 
         super().__init__(**kwargs)
 
-        self.substances = kwargs.get('substances', set()) 
+        self.substances = kwargs.get('substances', set())

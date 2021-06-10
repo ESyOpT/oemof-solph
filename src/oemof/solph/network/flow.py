@@ -206,7 +206,7 @@ class Flow(on.Edge):
                 setattr(
                     self,
                     attribute,
-                    {k: sequence(v) for k, v in value.items()}                 
+                    {k: sequence(v) for k, v in value.items()}
                 )
             else:
                 setattr(
@@ -240,3 +240,5 @@ class Flow(on.Edge):
                 + " flows! Investment is automatically attributed to standard"
                 + " objective.")
             warn(msg, UserWarning)
+
+            # TODO: add check for sum of substance concentrations

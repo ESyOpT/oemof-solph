@@ -101,10 +101,25 @@ multiobjective_flow_grouping = groupings.FlowsWithNodes(
 )
 
 
+def _multisubstance_grouping(stf):
+    if hasattr(stf[2], "substances"):
+        if stf[2].substances:
+            return True
+    else:
+        return False
+
+
+multisubstance_flow_grouping = groupings.FlowsWithNodes(
+    constant_key=blocks.MultiSubstanceFlow,
+    filter=_multisubstance_grouping
+)
+
+
 GROUPINGS = [
     constraint_grouping,
     investment_flow_grouping,
     standard_flow_grouping,
     nonconvex_flow_grouping,
     multiobjective_flow_grouping,
+    multisubstance_flow_grouping,
 ]

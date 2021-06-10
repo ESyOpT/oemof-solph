@@ -588,7 +588,7 @@ class MultiObjectiveModel(Model):
             raise Exception('Invalid optimization type')
 
 
-class Model(BaseModel):
+class MultiSubstanceModel(BaseModel):
     """An  energy system model for operational and investment
     optimization.
 
@@ -627,7 +627,7 @@ class Model(BaseModel):
         blocks.InvestmentFlow,
         blocks.Flow,
         blocks.NonConvexFlow,
-        blocks.MulticomponentFlow
+        blocks.MultiSubstanceFlow
     ]
 
     def __init__(self, energysystem, **kwargs):
@@ -648,10 +648,10 @@ class Model(BaseModel):
         previous_timesteps[0] = self.TIMESTEPS.last()
 
         self.previous_timesteps = dict(zip(self.TIMESTEPS, previous_timesteps))
-        
+
         # Multicomponent Flows
         self.SUBSTANCES = po.Set(initialize=self.es.substances)
-        
+
         # pyomo set for all flows in the energy system graph
         self.FLOWS = po.Set(
             initialize=self.flows.keys(), ordered=True, dimen=2
