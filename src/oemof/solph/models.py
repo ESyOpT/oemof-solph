@@ -588,7 +588,7 @@ class MultiObjectiveModel(Model):
             raise Exception('Invalid optimization type')
 
 
-class MultiSubstanceModel(BaseModel):
+class MultiSubstanceModel(Model):
     """An  energy system model for operational and investment
     optimization.
 
