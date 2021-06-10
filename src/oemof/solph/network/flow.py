@@ -146,11 +146,13 @@ class Flow(on.Edge):
             "multiobjective",
         ]
         sequences = ["fix", "variable_costs", "min", "max"]
+        sequence_dictionaries = ["substances"]
         dictionaries = ["positive_gradient", "negative_gradient"]
         defaults = {
             "variable_costs": 0,
             "positive_gradient": {"ub": None, "costs": 0},
             "negative_gradient": {"ub": None, "costs": 0},
+            "substances": {},
         }
         keys = [k for k in kwargs if k != "label"]
 
@@ -191,7 +193,8 @@ class Flow(on.Edge):
         if kwargs.get("max") is None:
             defaults["max"] = 1
 
-        for attribute in set(scalars + sequences + dictionaries + keys):
+        for attribute in set(scalars + sequences + dictionaries + keys
+                             + sequence_dictionaries):
             value = kwargs.get(attribute, defaults.get(attribute))
             if attribute in dictionaries:
                 setattr(
@@ -199,7 +202,12 @@ class Flow(on.Edge):
                     attribute,
                     {"ub": sequence(value["ub"]), "costs": value["costs"]},
                 )
-
+            elif attribute in sequence_dictionaries:
+                setattr(
+                    self,
+                    attribute,
+                    {k: sequence(v) for k, v in value.items()}                 
+                )
             else:
                 setattr(
                     self,

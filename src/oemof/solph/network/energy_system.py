@@ -40,3 +40,5 @@ class EnergySystem(es.EnergySystem):
         kwargs["groupings"] = GROUPINGS + kwargs.get("groupings", [])
 
         super().__init__(**kwargs)
+
+        self.substances = kwargs.get('substances', set()) 
