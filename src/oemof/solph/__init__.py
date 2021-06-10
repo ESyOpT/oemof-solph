@@ -11,6 +11,7 @@ from .components import OffsetTransformer  # noqa: F401
 from .groupings import GROUPINGS  # noqa: F401
 from .models import Model  # noqa: F401
 from .models import MultiObjectiveModel  # noqa: F401
+from .models import MultiSubstanceModel  # noqa: F401
 from .network import Bus  # noqa: F401
 from .network import EnergySystem  # noqa: F401
 from .network import Flow  # noqa: F401
