@@ -116,17 +116,17 @@ class MultiSubstanceFlow(SimpleBlock):
         # ######################### Variables  ################################
 
         self.substance_flow = Var(
-            m.MULTISUBSTANCEFLOWS, m.SUBSTANCES, m.TIMESTEPS,
+            self.MULTISUBSTANCEFLOWS, m.SUBSTANCES, m.TIMESTEPS,
             within=NonNegativeReals)
 
         # ######################### CONSTRAINTS ###############################
 
         def _substance_flow_rule(block, i, o, s, t):
             """Rule definition for multisubstances flows"""
-            lhs = m.flow[i, o, t] * m.substances[s][t]
+            lhs = m.flow[i, o, t] * m.flows[i, o].substances[s][t]
             rhs = block.substance_flow[i, o, s, t]
             return lhs == rhs
 
         self.substance_flow_rule = Constraint(
-            m.MULTISUBSTANCEFLOWS, m.SUBSTANCES, m.TIMESTEPS,
+            self.MULTISUBSTANCEFLOWS, m.SUBSTANCES, m.TIMESTEPS,
             rule=_substance_flow_rule)
