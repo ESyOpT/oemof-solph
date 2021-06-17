@@ -650,7 +650,7 @@ class MultiSubstanceModel(Model):
         self.previous_timesteps = dict(zip(self.TIMESTEPS, previous_timesteps))
 
         # Multicomponent Flows
-        self.SUBSTANCES = po.Set(initialize=self.es.substances)
+        self.SUBSTANCES = po.Set(initialize=self.es.substances, ordered=False)
 
         # pyomo set for all flows in the energy system graph
         self.FLOWS = po.Set(

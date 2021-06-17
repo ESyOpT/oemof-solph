@@ -42,3 +42,23 @@ class EnergySystem(es.EnergySystem):
         super().__init__(**kwargs)
 
         self.substances = kwargs.get('substances', set())
+
+    def add(self, *nodes):
+        """Add :class:`nodes <oemof.network.Node>` to this energy system."""
+        # check substances for all added nodes to ensure only substances
+        # declared in energySystem are used
+        for n in nodes:
+            # check flows for both inputs and outputs
+            for f in (set(n.inputs.values()) | set(n.outputs.values())):
+                if hasattr(f, 'substances') and f.substances:
+                    if not set(f.substances.keys()).issubset(self.substances):
+                        # if flow contains additional substances not
+                        # defined in energysystem calculate set difference
+                        # and inform user
+                        s = set(f.substances.keys()) - self.substances
+                        msg = ("Substance {} is  used in flow but not"
+                               + " declared in solph.EnergySystem")
+                        raise ValueError(msg.format(s))
+
+        # add nodes if substances are declared correctly
+        self.nodes.extend(nodes)
