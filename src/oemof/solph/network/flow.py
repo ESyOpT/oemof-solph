@@ -12,6 +12,7 @@ SPDX-FileCopyrightText: Birgit Schachler
 SPDX-License-Identifier: MIT
 
 """
+from collections import defaultdict
 
 from warnings import warn
 
@@ -206,7 +207,8 @@ class Flow(on.Edge):
                 setattr(
                     self,
                     attribute,
-                    {k: sequence(v) for k, v in value.items()}
+                    defaultdict(lambda: sequence(0),
+                                {k: sequence(v) for k, v in value.items()})
                 )
             else:
                 setattr(
