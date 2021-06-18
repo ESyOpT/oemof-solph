@@ -80,6 +80,11 @@ class Flow(on.Edge):
         Boolean value indicating if a flow is fixed during the optimization
         problem to its ex-ante set value. Used in combination with the
         :attr:`fix`.
+    substances : dict
+        Dict indicating the fractions of the substances on the total flow. Can
+        contain either iterable (if fractions vary over time) or scalar as
+        values. The sum of all fractions must equal to 1 in every timestep.
+        Keys must match the substances declared in the EnergySystem.
     investment : :class:`Investment <oemof.solph.options.Investment>`
         Object indicating if a nominal_value of the flow is determined by
         the optimization problem. Note: This will refer all attributes to an
@@ -99,6 +104,8 @@ class Flow(on.Edge):
         flow. To be used together with
         :class:`oemof.solph.models.MultiObjectiveModel` to generate
         multi objective program.
+
+
 
     Notes
     -----
