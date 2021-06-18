@@ -20,6 +20,8 @@ from oemof.tools import debugging
 
 from oemof.solph.plumbing import sequence
 
+import numpy as np
+
 
 class Flow(on.Edge):
     r"""Defines a flow between two nodes.
@@ -241,4 +243,13 @@ class Flow(on.Edge):
                 + " objective.")
             warn(msg, UserWarning)
 
-            # TODO: add check for sum of substance concentrations
+        if self.substances:
+            substance_list = list(self.substances.values())
+            # TODO: numpy crashes if a substance is passed as a sequence
+            # because the sequence does not have the same length as other lists
+            summed_fractions = np.sum(substance_list, axis=0)
+            if any(i != 1.0 for i in summed_fractions):
+                raise ValueError(
+                    "Fractions of the substances must sum to 1 in every" +
+                    "timestep!")
+
