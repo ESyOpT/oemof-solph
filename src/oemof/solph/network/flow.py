@@ -21,6 +21,8 @@ from oemof.tools import debugging
 
 from oemof.solph.plumbing import sequence
 
+import numpy as np
+
 
 class Flow(on.Edge):
     r"""Defines a flow between two nodes.
@@ -79,6 +81,11 @@ class Flow(on.Edge):
         Boolean value indicating if a flow is fixed during the optimization
         problem to its ex-ante set value. Used in combination with the
         :attr:`fix`.
+    substances : dict
+        Dict indicating the fractions of the substances on the total flow. Can
+        contain either iterable (if fractions vary over time) or scalar as
+        values. The sum of all fractions must equal to 1 in every timestep.
+        Keys must match the substances declared in the EnergySystem.
     investment : :class:`Investment <oemof.solph.options.Investment>`
         Object indicating if a nominal_value of the flow is determined by
         the optimization problem. Note: This will refer all attributes to an
@@ -98,6 +105,8 @@ class Flow(on.Edge):
         flow. To be used together with
         :class:`oemof.solph.models.MultiObjectiveModel` to generate
         multi objective program.
+
+
 
     Notes
     -----
@@ -243,4 +252,13 @@ class Flow(on.Edge):
                 + " objective.")
             warn(msg, UserWarning)
 
-            # TODO: add check for sum of substance concentrations
+        if self.substances:
+            substance_list = list(self.substances.values())
+            # TODO: numpy crashes if a substance is passed as a sequence
+            # because the sequence does not have the same length as other lists
+            summed_fractions = np.sum(substance_list, axis=0)
+            if any(i != 1.0 for i in summed_fractions):
+                raise ValueError(
+                    "Fractions of the substances must sum to 1 in every" +
+                    "timestep!")
+

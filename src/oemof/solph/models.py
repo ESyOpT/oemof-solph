@@ -612,6 +612,9 @@ class MultiSubstanceModel(Model):
     FLOWS :
         A 2 dimensional set with all flows. Index: `(source, target)`
 
+    SUBSTANCES :
+        An unordered set with all substances of the EnergySystem.
+
     **The following basic variables are created**:
 
     flow
