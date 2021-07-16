@@ -251,9 +251,15 @@ class Flow(on.Edge):
             warn(msg, UserWarning)
 
         if self.substances:
-            n = max(len(v) for v in self.substances.values())
+            # make sure length is at least 1 to check sum
+            # when all values are scalars
+            n = max(1, max(len(v) for v in self.substances.values()))
+
+            # calculate concentration su  for at least 1 timestep
             fraction_sums = [
                 sum(v[t] for v in self.substances.values()) for t in range(n)]
+
+            # check concentration sum
             if not all(fs == 1 for fs in fraction_sums):
                 raise ValueError(
                     "Fractions of the substances must sum to 1 in every" +

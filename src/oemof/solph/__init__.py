@@ -15,6 +15,7 @@ from .models import MultiSubstanceModel  # noqa: F401
 from .network import Bus  # noqa: F401
 from .network import EnergySystem  # noqa: F401
 from .network import Flow  # noqa: F401
+from .network import MultiSubstanceBus  # noqa: F401
 from .network import Sink  # noqa: F401
 from .network import Source  # noqa: F401
 from .network import Transformer  # noqa: F401

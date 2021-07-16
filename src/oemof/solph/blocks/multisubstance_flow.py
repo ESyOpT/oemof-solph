@@ -124,7 +124,7 @@ class MultiSubstanceFlow(SimpleBlock):
         def _substance_flow_rule(block, i, o, s, t):
             """Rule definition for multisubstances flows"""
             lhs = m.flow[i, o, t] * m.flows[i, o].substances[s][t]
-            rhs = block.substance_flow[i, o, s, t]
+            rhs = m.substance_flow[i, o, s, t]
             return lhs == rhs
 
         self.substance_flow_rule = Constraint(

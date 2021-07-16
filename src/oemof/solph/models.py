@@ -630,6 +630,7 @@ class MultiSubstanceModel(Model):
         blocks.InvestmentFlow,
         blocks.Flow,
         blocks.NonConvexFlow,
+        blocks.MultiSubstanceBus,
         blocks.MultiSubstanceFlow
     ]
 
@@ -681,3 +682,39 @@ class MultiSubstanceModel(Model):
             dimen=2,
             within=self.FLOWS,
         )
+
+    def _add_parent_block_variables(self):
+        """"""
+        self.flow = po.Var(self.FLOWS, self.TIMESTEPS, within=po.Reals)
+        self.substance_flow = po.Var(self.FLOWS, self.SUBSTANCES,
+                                     self.TIMESTEPS, within=po.Reals)
+
+        for (o, i) in self.FLOWS:
+            if self.flows[o, i].nominal_value is not None:
+                if self.flows[o, i].fix[self.TIMESTEPS[1]] is not None:
+                    for t in self.TIMESTEPS:
+                        self.flow[o, i, t].value = (
+                            self.flows[o, i].fix[t]
+                            * self.flows[o, i].nominal_value
+                        )
+                        self.flow[o, i, t].fix()
+                else:
+                    for t in self.TIMESTEPS:
+                        self.flow[o, i, t].setub(
+                            self.flows[o, i].max[t]
+                            * self.flows[o, i].nominal_value
+                        )
+
+                    if not self.flows[o, i].nonconvex:
+                        for t in self.TIMESTEPS:
+                            self.flow[o, i, t].setlb(
+                                self.flows[o, i].min[t]
+                                * self.flows[o, i].nominal_value
+                            )
+                    elif (o, i) in self.UNIDIRECTIONAL_FLOWS:
+                        for t in self.TIMESTEPS:
+                            self.flow[o, i, t].setlb(0)
+            else:
+                if (o, i) in self.UNIDIRECTIONAL_FLOWS:
+                    for t in self.TIMESTEPS:
+                        self.flow[o, i, t].setlb(0)
