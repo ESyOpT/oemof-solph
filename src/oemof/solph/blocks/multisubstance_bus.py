@@ -66,7 +66,21 @@ class MultiSubstanceBus(SimpleBlock):
                             m.substance_flow[g, o, s, t] for o in outs[g])
                         expr = lhs == rhs
                         # no inflows no outflows yield: 0 == 0 which is True
+                        """
+                        expr is a EqualityExpression object if lhs and rhs
+                        are objects. The if clause does not check if the
+                        value inside the Equality Expression is True, but if
+                        the expr object is of type True. If it is of type
+                        True, no inputs and outputs are present and no
+                        constraint needs to be build. If it's not of type True,
+                        a constraint needs to be build that ensures that the
+                        sum of all input flows of a specific substance equals
+                        the sum of all output flows of that substance.
+                        """
                         if expr is not True:
+                            # The following line adds a constraint with the
+                            # current g, s and t with the rule lhs==rhs to the
+                            # optimization
                             block.balance.add((g, s, t), expr)
 
         self.balance = Constraint(
