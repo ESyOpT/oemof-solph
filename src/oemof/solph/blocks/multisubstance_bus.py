@@ -18,6 +18,8 @@ SPDX-License-Identifier: MIT
 from pyomo.core import BuildAction
 from pyomo.core import Constraint
 from pyomo.core.base.block import SimpleBlock
+from oemof.tools import debugging
+import warnings
 
 
 class MultiSubstanceBus(SimpleBlock):
@@ -55,6 +57,27 @@ class MultiSubstanceBus(SimpleBlock):
         for n in group:
             ins[n] = [i for i in n.inputs]
             outs[n] = [o for o in n.outputs]
+            # get the concentrations of first output flow as reference
+            ref_conc = list(n.outputs.values())[0].substances.items()
+            # are all output flows concentrations equal to ref_conc?
+            result = all(elem == ref_conc for elem in [x.substances.items() for x in n.outputs.values()])
+            if result:
+                pass
+            else:
+                msg = "\n\nAll flows connected to the outputs of a " \
+                        + "MultiSubstanceBus must have the same"\
+                        + " substance concentrations. Results may otherwise "\
+                        + "be wrong.\n"
+                # get some infos for the warning message
+                source = n.label
+                output_labels = [x.label for x in n.outputs.keys()]
+                concentrations = [dict(x.substances.items()) for x in n.outputs.values()]
+                # append the warning message with those infos
+                for i in range(len(output_labels)):
+                    msg += "\nFlow: {} -> {}: {}".format(source,
+                                                output_labels[i],
+                                                concentrations[i])
+                warnings.warn(msg, debugging.SuspiciousUsageWarning)
 
         def _busbalance_rule(block):
             for t in m.TIMESTEPS:
