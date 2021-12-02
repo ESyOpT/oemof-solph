@@ -57,6 +57,10 @@ class MultiSubstanceBus(SimpleBlock):
         for n in group:
             ins[n] = [i for i in n.inputs]
             outs[n] = [o for o in n.outputs]
+            # TODO: check if concentration testing needs to be in the block-class
+            #       or if it should be in the network class. Testing is more oemof
+            #       compliant when warning is raised by network class.
+            
             # get the concentrations of first output flow as reference
             ref_conc = list(n.outputs.values())[0].substances.items()
             # are all output flows concentrations equal to ref_conc?
