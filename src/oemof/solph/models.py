@@ -13,6 +13,7 @@ SPDX-License-Identifier: MIT
 """
 import logging
 import warnings
+import copy
 from collections import defaultdict
 
 import numpy as np
@@ -407,14 +408,14 @@ class MultiObjectiveModel(Model):
         blocks.InvestmentFlow,
         blocks.Flow,
         blocks.NonConvexFlow,
-        blocks.MultiObjectiveFlow
+        blocks.MultiObjectiveFlow,
     ]
 
     def __init__(self, energysystem, **kwargs):
         super().__init__(energysystem, **kwargs)
 
     def _add_objective(self, sense=po.minimize, update=False):
-        """ Method to sum up all objective expressions from the child blocks
+        """Method to sum up all objective expressions from the child blocks
         that have been created. This method looks for `_objective_expression`
         attribute in the block definition and will call this method to add
         their return value to the objective function or to the respective
@@ -422,10 +423,10 @@ class MultiObjectiveModel(Model):
         """
 
         if update:
-            self.del_component('objective')
+            self.del_component("objective")
 
         # create dict for all distinct objective expressions
-        self.objective_functions = defaultdict(lambda: 0, {'_standard': 0})
+        self.objective_functions = defaultdict(lambda: 0, {"_standard": 0})
 
         # set sign based on optimisation sense
         if sense == po.minimize:
@@ -434,18 +435,16 @@ class MultiObjectiveModel(Model):
             sign = -1
 
         for block in self.component_data_objects():
-            if hasattr(block, '_objective_expression'):
+            if hasattr(block, "_objective_expression"):
                 expr = block._objective_expression()
                 if isinstance(expr, defaultdict):
                     for obj_key, obj_val in expr.items():
-                        self.objective_functions[obj_key] += (
-                            sign * obj_val)
+                        self.objective_functions[obj_key] += sign * obj_val
                 else:
-                    self.objective_functions['_standard'] += (
-                        sign * expr)
+                    self.objective_functions["_standard"] += sign * expr
 
-    def solve(self, solver='cbc', solver_io='lp', **kwargs):
-        r""" Takes care of communication with solver to solve the model.
+    def solve(self, solver="cbc", solver_io="lp", **kwargs):
+        r"""Takes care of communication with solver to solve the model.
         Differentiates between single objective optimization or multi
         objective optimization. Defaults to single objective optimization.
 
@@ -469,17 +468,25 @@ class MultiObjectiveModel(Model):
             {"interior":" "} results in "--interior"
             Gurobi solver takes numeric parameter values such as
             {"method": 2}
-        optimization_type: str, default 'singular'
-            Sets type of optimization, currently either 'singular' for single
-            objective or 'weighted' for weighted sum of several objectives.
-        objective (with 'singular'): str, default '_standard'
+        optimization_type : str, default 'singular'
+            Sets type of optimization, currently 'singular' for single
+            objective, 'weighted' for weighted sum of several objectives or
+            'lexicographic' for a hierarchical ordering of objectives.
+            
+            'lexicographic' adds attribute 'lexicographic_results' (dict) to
+            the instance, with names of objectives as keys and 
+            solph.MultiObjectiveModel instances as value, which store all 
+            intermediary results.
+        objective (with 'singular') : str, default '_standard'
             Name of singular objective function to use. Defaults to internal
             standard name.
-        objective_weights (with 'weighted'): dict, default {'_standard': 1}
+        objective_weights (with 'weighted') : dict, default {'_standard': 1}
             Dictionary with names of objectives as keys and numeric weights
             as values.
+        objective_order (with 'lexicographic') : list, default None
+            List with names of objectives ranked by occurence in the list.
         """
-        solve_kwargs = kwargs.get('solve_kwargs', {})
+        solve_kwargs = kwargs.get("solve_kwargs", {})
         solver_cmdline_options = kwargs.get("cmdline_options", {})
 
         opt = SolverFactory(solver, solver_io=solver_io)
@@ -489,53 +496,57 @@ class MultiObjectiveModel(Model):
             options[k] = solver_cmdline_options[k]
 
         # get type of optimisation
-        optimization_type = kwargs.get('optimization_type', 'singular')
+        optimization_type = kwargs.get("optimization_type", "singular")
 
         # delete objective if it exists
-        self.del_component('objective')
+        self.del_component("objective")
 
-        if optimization_type == 'singular':
+        if optimization_type == "singular":
             # get function to use
-            objective = kwargs.get('objective', '_standard')
+            objective = kwargs.get("objective", "_standard")
 
             if not isinstance(objective, str):
                 raise TypeError('Objective is not of type "string"')
             if objective not in self.objective_functions.keys():
                 raise ValueError(
-                    'No cost for objective "{0}"'.format(objective))
+                    'No cost for objective "{0}"'.format(objective)
+                )
 
             # log objective
-            logging.info('Objective set to {0}.'.format(objective))
+            logging.info("Objective set to {0}.".format(objective))
 
             # set chosen objective function
             self.objective = po.Objective(
                 sense=po.minimize,
-                expr=self.objective_functions.get(objective, 0.0))
+                expr=self.objective_functions.get(objective, 0.0),
+            )
 
             solver_results = opt.solve(self, **solve_kwargs)
 
             status = solver_results["Solver"][0]["Status"]
-            termination_condition = (
-                solver_results["Solver"][0]["Termination condition"])
+            termination_condition = solver_results["Solver"][0][
+                "Termination condition"
+            ]
 
             if status == "ok" and termination_condition == "optimal":
                 logging.info("Optimization successful...")
             else:
-                msg = ("Optimization ended with status {0} and termination "
-                       "condition {1}")
-                warnings.warn(msg.format(status, termination_condition),
-                              UserWarning)
+                msg = (
+                    "Optimization ended with status {0} and termination "
+                    "condition {1}"
+                )
+                warnings.warn(
+                    msg.format(status, termination_condition), UserWarning
+                )
             self.es.results = solver_results
             self.solver_results = solver_results
 
             return solver_results
 
-        elif optimization_type == 'weighted':
+        elif optimization_type == "weighted":
 
             # get function names and weights to use
-            obj_weights = kwargs.get(
-                'objective_weights',
-                {'_standard': 1})
+            obj_weights = kwargs.get("objective_weights", {"_standard": 1})
 
             # check for correct type
             if not isinstance(obj_weights, dict):
@@ -553,18 +564,23 @@ class MultiObjectiveModel(Model):
                 if not isinstance(obj_name, str):
                     raise TypeError(
                         'Objective "{0}" is not of type "string"'.format(
-                            obj_name))
+                            obj_name
+                        )
+                    )
                 if obj_name not in self.objective_functions.keys():
-                    raise ValueError('No cost for objective "{0}"'.format(
-                        obj_name))
+                    raise ValueError(
+                        'No cost for objective "{0}"'.format(obj_name)
+                    )
 
                 # add to summed objective
-                expr += (obj_weight
-                         * self.objective_functions.get(obj_name))
+                expr += obj_weight * self.objective_functions.get(obj_name)
 
             # log objective and weights
-            logging.info('Objectives set to: {0} with weights: {1}'.format(
-                ', '.join(obj_weights.keys()), str(obj_weights)))
+            logging.info(
+                "Objectives set to: {0} with weights: {1}".format(
+                    ", ".join(obj_weights.keys()), str(obj_weights)
+                )
+            )
 
             # create objective
             self.objective = po.Objective(sense=po.minimize, expr=expr)
@@ -573,25 +589,125 @@ class MultiObjectiveModel(Model):
             solver_results = opt.solve(self, **solve_kwargs)
 
             status = solver_results["Solver"][0]["Status"]
-            termination_condition = (
-                solver_results["Solver"][0]["Termination condition"])
+            termination_condition = solver_results["Solver"][0][
+                "Termination condition"
+            ]
 
             if status == "ok" and termination_condition == "optimal":
                 logging.info("Optimization successful...")
             else:
-                msg = ("Optimization ended with status {0} and termination "
-                       "condition {1}")
-                warnings.warn(msg.format(status, termination_condition),
-                              UserWarning)
+                msg = (
+                    "Optimization ended with status {0} and termination "
+                    "condition {1}"
+                )
+                warnings.warn(
+                    msg.format(status, termination_condition), UserWarning
+                )
             self.es.results = solver_results
             self.solver_results = solver_results
 
             return solver_results
-        else:
-            raise Exception('Invalid optimization type')
 
-    def pareto(self, solver='cbc', solver_io='lp', **kwargs):
-        solve_kwargs = kwargs.get('solve_kwargs', {})
+        elif optimization_type == "lexicographic":
+            # get objective ordering
+            obj_order = kwargs.get("objective_order", None)
+            if obj_order is None:
+                raise ValueError(
+                    "No objective_order found. Optimization_type 'lexicographic' requires objective_order."
+                )
+            # check for correct type
+            if not isinstance(obj_order, list):
+                raise TypeError("Objective order must be passed as 'list'.")
+            # check existance of objectives
+            if len(obj_order) == 0:
+                raise ValueError("objective_order must not be empty.")
+            lexicographic_results = dict()
+            for obj_number, obj_name in enumerate(obj_order):
+                expr = 0
+                if not isinstance(obj_name, str):
+                    raise TypeError("All objectives must be of type 'string'.")
+
+                if obj_name not in self.objective_functions.keys():
+                    raise ValueError(
+                        "No cost for objective function {}".format(obj_name)
+                    )
+                expr = self.objective_functions.get(obj_name)
+                logging.info(
+                    "Objective {} set to: {}".format(obj_number, obj_name)
+                )
+                # delete former objective
+                self.del_component("objective")
+                # create objective
+                self.objective = po.Objective(sense=po.minimize, expr=expr)
+                # solve
+                solver_results = opt.solve(self, **solve_kwargs)
+                status = solver_results["Solver"][0]["Status"]
+                termination_condition = solver_results["Solver"][0][
+                    "Termination condition"
+                ]
+                if status == "ok" and termination_condition == "optimal":
+                    logging.info(
+                        "Optimization with objective {} successfull...".format(
+                            obj_name
+                        )
+                    )
+                else:
+                    msg = "Optimization with objective {} ended with status {} and termination condition {}"
+                    warnings.warn(
+                        msg.format(obj_name, status, termination_condition),
+                        UserWarning,
+                    )
+                # lexicographic_results[obj_name] = dict(
+                #    meta=solver_results, main=processing.results(self)
+                # )
+                test_self = copy.deepcopy(self)
+                lexicographic_results[obj_name] = test_self
+
+                # create dict of flows with multiobjective keyword
+                mo_flows = {}
+                for (i, o) in self.flows:
+                    if self.flows[i, o].multiobjective is not None:
+                        mo_flows[(i, o)] = self.flows[i, o]
+
+                # set integral limit of objective value for next interation
+                limit_name = "integral_limit_" + obj_name
+                setattr(
+                    self,
+                    limit_name,
+                    po.Expression(
+                        expr=sum(
+                            self.flow[inflow, outflow, t]
+                            * self.timeincrement[t]
+                            * sequence(
+                                getattr(
+                                    mo_flows[
+                                        inflow, outflow
+                                    ].multiobjective.mo[obj_name],
+                                    "variable_costs",
+                                )
+                            )[t]
+                            for (inflow, outflow) in mo_flows
+                            for t in self.TIMESTEPS
+                        )
+                    ),
+                )
+
+                limit = self.objective()
+                setattr(
+                    self,
+                    limit_name + "_constraint",
+                    po.Constraint(expr=(getattr(self, limit_name) <= limit)),
+                )
+            self.es.results = solver_results
+            self.solver_results = solver_results
+            self.lexicographic_results = lexicographic_results
+
+            return solver_results
+        else:
+            raise Exception("Invalid optimization type")
+
+    def pareto(self, solver="cbc", solver_io="lp", **kwargs):
+        solve_kwargs = kwargs.get("solve_kwargs", {})
         solver_cmdline_options = kwargs.get("cmdline_options", {})
 
         opt = SolverFactory(solver, solver_io=solver_io)
@@ -600,9 +716,8 @@ class MultiObjectiveModel(Model):
         for k in solver_cmdline_options:
             options[k] = solver_cmdline_options[k]
 
-
         # number of dimensions
-        obj_list = kwargs.get('objectives', list())
+        obj_list = kwargs.get("objectives", list())
 
         # check if all objectives ar unique
         objectives = []
@@ -610,47 +725,50 @@ class MultiObjectiveModel(Model):
             if obj not in objectives:
                 objectives.append(obj)
             else:
-                msg = ("Objectives should be given only once."
-                       + " Truncated {{obj_list}} to contain only"
-                       + " unique values")
+                msg = (
+                    "Objectives should be given only once."
+                    + " Truncated {{obj_list}} to contain only"
+                    + " unique values"
+                )
                 warnings.warn(msg, UserWarning)
 
         if len(objectives) <= 1:
             raise ValueError(
-                'List of objectives must contain at'
-                + ' least 2 unique entries!')
+                "List of objectives must contain at"
+                + " least 2 unique entries!"
+            )
 
         # number of dimensions for grid
         ndim = len(objectives)
 
         # number of points per dimension
-        npoints = kwargs.get('npoints', 2)
+        npoints = kwargs.get("npoints", 2)
 
         # create unscaled grid of weights
-        weights_unscaled = np.meshgrid(
-            *(range(npoints) for i in range(ndim)))
+        weights_unscaled = np.meshgrid(*(range(npoints) for i in range(ndim)))
 
         # reshape (flatten) to 1d arrays
-        weights_unscaled = np.squeeze(np.array(
-            [np.reshape(w, (-1, 1))[1:, :] for w in weights_unscaled]))
+        weights_unscaled = np.squeeze(
+            np.array([np.reshape(w, (-1, 1))[1:, :] for w in weights_unscaled])
+        )
 
         # calculate unique weights scaled to 1
         weights_scaled = np.unique(
-            weights_unscaled / weights_unscaled.sum(axis=0), axis=1).T
+            weights_unscaled / weights_unscaled.sum(axis=0), axis=1
+        ).T
 
         # create DataFrame to hold results for each point/objective
         results = DataFrame(
-            index=range(weights_scaled.shape[0]),
-            data=0,
-            columns=objectives)
+            index=range(weights_scaled.shape[0]), data=0, columns=objectives
+        )
 
         # add counter for current weight combination
-        j=0
+        j = 0
 
         # iterate over different weights
         for weights in weights_scaled:
             # delete objective if it exists
-            self.del_component('objective')
+            self.del_component("objective")
 
             # initialise weighted sum of objectives
             expr = 0
@@ -658,9 +776,9 @@ class MultiObjectiveModel(Model):
             # iterate over unique objectives
             for i in range(ndim):
                 # add to summed objective
-                expr += (
-                    weights[i]
-                    * self.objective_functions.get(objectives[i]))
+                expr += weights[i] * self.objective_functions.get(
+                    objectives[i]
+                )
 
             # create objective
             self.objective = po.Objective(sense=po.minimize, expr=expr)
@@ -669,19 +787,21 @@ class MultiObjectiveModel(Model):
             opt.solve(self, **solve_kwargs)
 
             for i in range(ndim):
-                results.at[j, objectives[i]] = (po.value(
-                    self.objective_functions.get(objectives[i])))
+                results.at[j, objectives[i]] = po.value(
+                    self.objective_functions.get(objectives[i])
+                )
 
             j += 1
 
         # find weight combinations belonging to pareto frontier
         costs = np.array(results)
-        pareto_indices = np.ones(costs.shape[0], dtype = bool)
+        pareto_indices = np.ones(costs.shape[0], dtype=bool)
         for i, c in enumerate(costs):
             if pareto_indices[i]:
                 # keep any point with a lower cost
-                pareto_indices[pareto_indices] = (
-                    np.any(costs[pareto_indices]<c, axis=1))
+                pareto_indices[pareto_indices] = np.any(
+                    costs[pareto_indices] < c, axis=1
+                )
                 # and keep self
                 pareto_indices[i] = True
 
