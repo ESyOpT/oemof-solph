@@ -657,9 +657,6 @@ class MultiObjectiveModel(Model):
                         msg.format(obj_name, status, termination_condition),
                         UserWarning,
                     )
-                # lexicographic_results[obj_name] = dict(
-                #    meta=solver_results, main=processing.results(self)
-                # )
                 test_self = copy.deepcopy(self)
                 lexicographic_results[obj_name] = test_self
 
