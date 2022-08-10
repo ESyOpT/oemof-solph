@@ -472,10 +472,10 @@ class MultiObjectiveModel(Model):
             Sets type of optimization, currently 'singular' for single
             objective, 'weighted' for weighted sum of several objectives or
             'lexicographic' for a hierarchical ordering of objectives.
-            
+
             'lexicographic' adds attribute 'lexicographic_results' (dict) to
-            the instance, with names of objectives as keys and 
-            solph.MultiObjectiveModel instances as value, which store all 
+            the instance, with names of objectives as keys and
+            solph.MultiObjectiveModel instances as value, which store all
             intermediary results.
         objective (with 'singular') : str, default '_standard'
             Name of singular objective function to use. Defaults to internal
@@ -689,7 +689,7 @@ class MultiObjectiveModel(Model):
                     ),
                 )
 
-                limit = self.objective()
+                limit = np.ceil(self.objective())
                 setattr(
                     self,
                     limit_name + "_constraint",
